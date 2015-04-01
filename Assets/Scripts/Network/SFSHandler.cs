@@ -131,7 +131,9 @@ public class SFSHandler : MonoBehaviour {
 
 		createdRoomName = roomName; // keep this in order to access the room later 
 		roomSettings = new RoomSettings(roomName);
-		sfs.Send (new CreateRoomRequest (roomSettings, false, null));
+        roomSettings.Extension = new RoomExtension("myExt", "myExtPackage.MainExtension"); //add extensions to the new room
+		
+        sfs.Send (new CreateRoomRequest (roomSettings, false, null));
 	}
 
 	//Request to join existing room
@@ -147,12 +149,17 @@ public class SFSHandler : MonoBehaviour {
 	//Force quit the aplication and disconnect from server
 	public void exitGame() {
 		sfs.Disconnect();
+		Application.Quit();
 		System.Diagnostics.Process.GetCurrentProcess ().Kill ();
+	}
+
+	private void OnApplicationQuit() {
+		sfs.Disconnect();
 	}
 
 	//functions for sending requests and recieving responses
 	//*********************************************************************
-	public void sendDataToServer(int _rotX, int _rotY , int _thrust) {
+	public void requestPilotTransform(int _rotX, int _rotY , int _thrust) {
 
 		ISFSObject objOut = new SFSObject ();
 		objOut.PutInt ("rotX", _rotX);
@@ -162,30 +169,110 @@ public class SFSHandler : MonoBehaviour {
 		sfs.Send (new ExtensionRequest ("RequestTransform", objOut, sfs.LastJoinedRoom, true));
 	}
 
-	//handle data sent from server
+	public void requestGunnerRotation(int _rotX, int _rotY) {
+		ISFSObject objOut = new SFSObject ();
+		objOut.PutInt("GrotX", _rotX);
+		objOut.PutInt("GrotY", _rotY);
+
+		sfs.Send (new ExtensionRequest ("RequestGunnerRotation", objOut, sfs.LastJoinedRoom, true));
+
+		Debug.Log("Request gunner Rotation!");
+	}
+
+	//ask server for permission to shoot
+	public void requestGunnerFire() {
+		ISFSObject objOut = new SFSObject ();
+		sfs.Send (new ExtensionRequest("Fire", objOut, sfs.LastJoinedRoom, true)); 
+
+		Debug.Log("Request gunner fire!");
+	}
+
+    //ask permission to change shield power
+    public void requestShieldPowerTransfer(float _amount) {
+        ISFSObject objOut = new SFSObject();
+        objOut.PutFloat("ShieldPowerAmount", _amount);
+        //sfs.Send(new ExtensionRequest("ReqShieldPower", objOut, sfs.LastJoinedRoom, true));
+
+        Debug.Log("Requesting to change shield power");
+    }
+
+    //ask permission to change enginge power
+    public void requestEnginePowerTransfer(float _amount) {
+        ISFSObject objOut = new SFSObject();
+        objOut.PutFloat("EnginePowerAmount", _amount);
+        //sfs.Send(new ExtensionRequest("ReqEnginePower", objOut, sfs.LastJoinedRoom, true));
+
+        Debug.Log("Requesting to change engine power");
+    }
+
+    //ask permission to change turret power
+    public void requestTurretPowerTransfer(float _amount) {
+        ISFSObject objOut = new SFSObject();
+        objOut.PutFloat("TurretPowerAmount", _amount);
+        //sfs.Send(new ExtensionRequest("ReqTurretPower", objOut, sfs.LastJoinedRoom, true));
+
+        Debug.Log("Requesting to change turret power");
+    }
+	
+	//server responses, handle data sent from server
+	//*********************************************************************
 	void OnExtensionResponse(BaseEvent e) {
 		string cmd = (string)e.Params["cmd"];
 		ISFSObject objIn = (SFSObject)e.Params["params"];
 
-		Debug.Log("We got a respons from the server!");
-
-
-		//use switch to check what response the server is giving
+		//check what response the server is giving
 		switch (cmd) {
 
-			case "ShipTransform": //recieved new transform and will update position and rotation
+		//new pilot transform data from server
+		case "ShipTransform": 
 
+			//check which scene is running, get the gameobject script and update
+			switch(Application.loadedLevelName) {
+
+			case "InGamePilot":
 				//get pilot script
-				GameObject pilotObject = GameObject.Find("SpaceShip");
+				GameObject pilotObject = GameObject.Find("Pilot");
 				PilotControlls pilotScript = (PilotControlls) pilotObject.GetComponent(typeof(PilotControlls));
 
-				//send new data to pilot script and update positions
-				//pilotScript.updatePosition(objIn.GetDouble("x"), objIn.GetDouble("y"), objIn.GetDouble("z"));
+				pilotScript.updatePosition(objIn.GetDouble("x"), objIn.GetDouble("y"), objIn.GetDouble("z"));
 				pilotScript.updateRotation(objIn.GetDouble("rotX"), objIn.GetDouble("rotY"), objIn.GetDouble("rotZ"));
+				break;
+
+			case "InGameGunner":
+				//get pilot script
+				GameObject gunnerObject = GameObject.Find("Gunner");
+				GunnerControlls gunnerScript = (GunnerControlls) gunnerObject.GetComponent(typeof(GunnerControlls));
+
+				//update rotation
+				gunnerScript.updateRotation(objIn.GetDouble("rotX"), objIn.GetDouble("rotY"), objIn.GetDouble("rotZ"));
+				break;
+			}
+			break;
+
+		//new roatation data from server to gunner
+		case "GunnerRotation":
+			if(Application.loadedLevelName == "InGameGunner"){
+				//get gunner script
+				GameObject gunnerObject = GameObject.Find("Gunner");
+				GunnerControlls gunnerScript = (GunnerControlls) gunnerObject.GetComponent(typeof(GunnerControlls));
+
+				//update rotation
+				gunnerScript.updateRotation(objIn.GetDouble("rotX"), objIn.GetDouble("rotY"), objIn.GetDouble("rotZ"));
+			}
+			break;
+		
+		case "GunnerFire":
+			if(Application.loadedLevelName == "InGameGunner"){
+				//get gunner script
+				GameObject gunnerObject = GameObject.Find("Gunner");
+				GunnerControlls gunnerScript = (GunnerControlls) gunnerObject.GetComponent(typeof(GunnerControlls));
+				
+				//tell gunner its ok to shoot
+				gunnerScript.shoot();
+			}
 			break;
 
 		}
-
 	}
 }
 

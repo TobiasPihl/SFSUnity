@@ -53,7 +53,7 @@ public class PilotControlls : MonoBehaviour {
 
 		//send input data to server
 		if(!(horizontalInput == 0 && verticalInput == 0 && thrustInput == 0))
-			sfsScript.sendDataToServer (horizontalInput, verticalInput, thrustInput);
+			sfsScript.requestPilotTransform (horizontalInput, verticalInput, thrustInput);
 		
 		//toggle in game menu
 		if (Input.GetButtonDown ("Cancel") && !showInGameMenu) {
@@ -94,7 +94,6 @@ public class PilotControlls : MonoBehaviour {
 			if (GUI.Button (new Rect (Screen.width/2-buttonWidth/2, firstButtonY, buttonWidth, buttonHeight), "Settings")) {
 			}
 			if (GUI.Button (new Rect (Screen.width/2-buttonWidth/2, firstButtonY+verticalButtonSpacing, buttonWidth, buttonHeight), "Abandon Game")) {
-
 				sfsScript.leaveRoom();
 			}
 		}

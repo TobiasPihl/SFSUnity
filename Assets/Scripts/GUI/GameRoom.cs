@@ -89,7 +89,7 @@ public class GameRoom : MonoBehaviour {
 		//If player clicks role, a new button replaces the old so that player can deselect
 		if (!engineerSelected) {
 			if (GUI.Button (new Rect (Screen.width/2 - buttonWidth/2 + 100, roleButtonY, buttonWidth, buttonHeight), "Engineer", guiStyle.myStyle) && !roleSelected) {
-				role = "";
+                role = "InGameEngineer";
 				engineerSelected = true;
 				roleSelected = true;
 			}
